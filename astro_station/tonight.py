@@ -1,18 +1,18 @@
 """'Heute Nacht': gut sichtbare Ziele mit Zeitfenster, Kulmination und Hoehe jetzt; Zielsuche.
 
 Grundliste: data/highlights.json (aus OpenNGC, CC-BY-SA 4.0, mit deutschen Namen). Die Suche nutzt den
-vollen OpenNGC-Katalog, wenn siril/data/NGC.csv vorhanden ist (siehe siril/README.md), sonst die Grundliste.
+vollen OpenNGC-Katalog, wenn data/NGC.csv vorhanden ist (field/install-desktop.sh laedt ihn), sonst die Grundliste.
 """
 from __future__ import annotations
 
 import json
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from . import astro
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
+DATA = Path(__file__).with_name("data")
 HIGHLIGHTS = Path(__file__).with_name("data") / "highlights.json"
 PLANETS_DE = ["Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptun"]
 TAG = {"galaxy": "Galaxie", "cluster": "Haufen", "nebula": "Nebel", "planet": "Planet", "moon": "Mond"}
@@ -31,12 +31,11 @@ class Sky:
     def __init__(self, catalog_paths: list[str] | None = None):
         self.highlights = json.loads(HIGHLIGHTS.read_text(encoding="utf-8"))
         paths = [Path(p).expanduser() for p in (catalog_paths or [])] or \
-                [ROOT / "siril" / "data" / "NGC.csv", ROOT / "siril" / "data" / "addendum.csv"]
+                [ROOT / "data" / "NGC.csv", ROOT / "data" / "addendum.csv"]
         self.catalog = None
         if any(p.exists() for p in paths):
-            sys.path.insert(0, str(ROOT / "siril" / "lib"))
-            from catalog import Catalog
-            self.catalog = Catalog([p for p in paths if p.exists()], ROOT / "siril" / "lib" / "objects_de.json")
+            from .catalog import Catalog
+            self.catalog = Catalog([p for p in paths if p.exists()], DATA / "objects_de.json")
         self._cache: dict = {}
 
     # ------------------------------------------------------------ Nacht
@@ -113,7 +112,7 @@ class Sky:
                         "window": "Suchlauf am Seestar", "peak": "", "alt": None})
         objs = []
         if self.catalog:
-            from catalog import norm
+            from .catalog import norm
             nk = norm(q)
             exact = self.catalog.find(q)
             for o in self.catalog.objects:

@@ -13,7 +13,7 @@ Live-Fenster <── MJPEG :7556 (seestar_alp) ───┘               └─
 | Datei | Zweck |
 |---|---|
 | `astro_station/server.py` | aiohttp: REST-API, Web-App, Stellarium-Ports |
-| `astro_station/devices/` | Gerätetypen: `seestar.py` (über seestar_alp), `indi_mount.py` (Montierung + Kamera über INDI, nutzt `pi/astro_pi`) |
+| `astro_station/devices/` | Gerätetypen: `seestar.py` (über seestar_alp), `indi_mount.py` (Montierung + Kamera über INDI, nutzt `astro_pi/`) |
 | `astro_station/stellarium.py` | Telescope-Control-Protokoll von Stellarium („Externe Software“) |
 | `astro_station/tonight.py`, `astro.py` | Nacht, Mond, Sichtbarkeitsfenster, Zielsuche (ohne Zusatzpakete) |
 | `astro_station/livewin.py` | Live-Fenster (GTK 3), öffnet sich bei den ersten Bilddaten |
@@ -23,12 +23,12 @@ Live-Fenster <── MJPEG :7556 (seestar_alp) ───┘               └─
 
 ## Einrichten
 
-Der Feld-Laptop ist wie in [`field/README.md`](../field/README.md) eingerichtet. Danach:
+Der Feld-Laptop ist wie in [`field/README.md`](feld-laptop.md) eingerichtet. Danach:
 
 ```bash
 sudo apt install python3-aiohttp python3-gi python3-gi-cairo gir1.2-gtk-3.0
 sudo apt install python3-numpy python3-pil        # nur für die INDI-Montierung (Kamera-Vorschau)
-cd ~/Astro/seestar-astro-pipeline && git pull
+cd ~/Astro/telescope-tools && git pull
 bash field/install-desktop.sh --server-alp 192.168.1.XX:5555
 ```
 
@@ -51,7 +51,7 @@ Geht auf, sobald seestar_alp Bilder vom Seestar liefert. Nach dem GoTo zeigt es 
 - **Im Vordergrund** hält das Fenster über Stellarium.
 - **Vollbild** (oder F), **Bild speichern** legt eine JPEG-Datei unter `~/Bilder/Astro-Live/` ab.
 - Schließen versteckt das Fenster bis zur nächsten Ansicht. Ist eine Ansicht beendet, bleibt das letzte Bild stehen.
-- Von Hand: `cd station && python3 -m astro_station.livewin --show`
+- Von Hand: `python3 -m astro_station.livewin --show`
 
 ## Geräte
 
@@ -65,7 +65,7 @@ Neuer Gerätetyp: eine Klasse nach `devices/base.py` schreiben und in `devices/_
 ## Trockenlauf ohne Seestar
 
 ```bash
-cd ~/Astro/seestar-astro-pipeline/station
+cd ~/Astro/telescope-tools
 python3 tools/fake_seestar.py --offset 10000 &          # Übungs-Seestar auf :15555/:15432/:17556
 cat > /tmp/uebung.toml <<'EOF'
 [web]

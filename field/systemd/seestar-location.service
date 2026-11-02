@@ -5,4 +5,4 @@ After=seestar-alp.service gpsd.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/python3 %h/Astro/seestar-astro-pipeline/field/seestar_location_sync.py --config %h/Astro/seestar_alp/device/config.toml --push
+ExecStart=/usr/bin/python3 %h/Astro/telescope-tools/field/seestar_location_sync.py --config %h/Astro/seestar_alp/device/config.toml --push

@@ -1,7 +1,7 @@
 """Deep-Sky-Katalog (OpenNGC) laden und Objekte fuer ein Bildfeld auswaehlen.
 
 OpenNGC: https://github.com/mattiaverga/OpenNGC  (Lizenz CC-BY-SA 4.0)
-Die Datei NGC.csv wird bei der Installation heruntergeladen, siehe siril/README.md.
+Die Datei NGC.csv laedt field/install-desktop.sh nach data/ herunter.
 """
 from __future__ import annotations
 

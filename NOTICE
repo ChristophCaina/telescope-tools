@@ -1,0 +1,13 @@
+Telescope Tools
+Copyright (c) 2026 Christoph Caina – MIT License (see LICENSE)
+
+Third-party data and software:
+
+- OpenNGC (https://github.com/mattiaverga/OpenNGC), CC-BY-SA 4.0.
+  astro_station/data/highlights.json is derived from OpenNGC; the full catalog
+  (data/NGC.csv, data/addendum.csv) is downloaded at install time and not part of this repository.
+- seestar_alp (https://github.com/smart-underworld/seestar_alp) is used as an external service
+  for ZWO Seestar telescopes. It is not included here.
+
+This is an unofficial tool. It is not affiliated with ZWO, Stellarium or the INDI project.
+Firmware updates of your devices may change their behaviour.

@@ -1,7 +1,7 @@
 """Uebungs-Seestar: tut so, als waeren seestar_alp und ein Seestar da – fuer Tests und Trockenlaeufe.
 
-    python3 station/tools/fake_seestar.py            # Alpaca :5555, Web-UI :5432, Bildserver :7556
-    python3 station/tools/fake_seestar.py --offset 10000   # Ports +10000 (laeuft neben einem echten seestar_alp)
+    python3 tools/fake_seestar.py            # Alpaca :5555, Web-UI :5432, Bildserver :7556
+    python3 tools/fake_seestar.py --offset 10000   # Ports +10000 (laeuft neben einem echten seestar_alp)
 
 Arm, GoTo, Live-Ansicht, Stacking und Stopp verhalten sich grob wie am Geraet; der Bildserver
 liefert waehrend einer Ansicht synthetische Sternfeld-Bilder (MJPEG), danach endet der Strom.

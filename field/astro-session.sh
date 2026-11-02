@@ -26,7 +26,7 @@ OPEN_STELLARIUM="${OPEN_STELLARIUM:-1}"
 OPEN_BROWSER="${OPEN_BROWSER:-1}"
 OPEN_LIVEWIN="${OPEN_LIVEWIN:-1}"
 CLOSE_STELLARIUM="${CLOSE_STELLARIUM:-1}"
-STATION_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../station" && pwd)"
+STATION_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVICES=(seestar-alp.service seestar-indi.service astro-station.service)
 TITLE="Astro-Session"
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # install-desktop.sh – Feld-Laptop einrichten: Dienste, Desktop-Starter, kein Autostart.
 #
-#   bash ~/Astro/seestar-astro-pipeline/field/install-desktop.sh [--server-alp 192.168.1.XX:5555]
+#   bash ~/Astro/telescope-tools/field/install-desktop.sh [--server-alp 192.168.1.XX:5555]
 #
 # Legt an:
 #   ~/.config/systemd/user/seestar-*.service|timer, astro-station.service   (aus field/systemd)
-#   ~/.config/astro-station.toml (aus station/astro-station.toml.example, falls noch nicht da)
-#   siril/data/NGC.csv (OpenNGC-Katalog fuer die Zielsuche, falls noch nicht da)
+#   ~/.config/astro-station.toml (aus astro-station.toml.example, falls noch nicht da)
+#   data/NGC.csv (OpenNGC-Katalog fuer die Zielsuche, falls noch nicht da)
 #   Desktop:  "Astro-Session starten" / "Astro-Session beenden"
 #   Menue:    dieselben Eintraege unter Bildung/Wissenschaft
 # Die Dienste starten danach NICHT mehr automatisch beim Anmelden, nur ueber den Starter.
@@ -35,8 +35,8 @@ chmod +x "$HERE/astro-session.sh" "$HERE/seestar_location_sync.py"
 
 # Astro-Station: Konfiguration und Zielkatalog
 STATION_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/astro-station.toml"
-[[ -f "$STATION_CONF" ]] || cp "$HERE/../station/astro-station.toml.example" "$STATION_CONF"
-DATA="$HERE/../siril/data"
+[[ -f "$STATION_CONF" ]] || cp "$HERE/../astro-station.toml.example" "$STATION_CONF"
+DATA="$HERE/../data"
 if [[ ! -f "$DATA/NGC.csv" ]]; then
   mkdir -p "$DATA"
   for f in NGC.csv addendum.csv; do

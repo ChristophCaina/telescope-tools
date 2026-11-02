@@ -12,8 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "station"))
-sys.path.insert(0, str(ROOT / "station" / "tools"))
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tools"))
 
 from astro_station import astro, config, stellarium  # noqa: E402
 from astro_station.livestream import MjpegParser  # noqa: E402
@@ -98,7 +98,7 @@ class ProtocolTest(unittest.TestCase):
         self.assertEqual(parts[1][1], b"\xff\xd8A\xff\xd9")
 
     def test_config_location(self):
-        cfg = config.load(ROOT / "station" / "astro-station.toml.example")
+        cfg = config.load(ROOT / "astro-station.toml.example")
         self.assertEqual([d["id"] for d in cfg["device"]], ["s50", "iexos"])
         with tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False) as f:
             f.write("[seestar_initialization]\nlat = 47.5\nlong = 7.25\n")
@@ -109,7 +109,7 @@ class ProtocolTest(unittest.TestCase):
 class FitsCardsTest(unittest.TestCase):
     def test_add_cards(self):
         try:
-            sys.path.insert(0, str(ROOT / "pi"))
+            sys.path.insert(0, str(ROOT))
             from astro_pi import image
         except ImportError:
             self.skipTest("numpy/PIL fehlen")

@@ -8,13 +8,13 @@ KStars/Ekos ──INDI :7624──> indiserver ──> indi/seestar.py ──Alp
                          seestar_location_sync.py ── GPS (gpsd) ──┘  oder Standort aus der Seestar-App
 ```
 
-Zu Hause übernimmt seestar_alp im LXC (`docs/01-seestar-alp-lxc.md`). **Pro Seestar läuft immer nur ein seestar_alp.** Ist der Seestar im Heim-WLAN, den Laptop-Dienst aus lassen oder den Dienst im LXC vorher stoppen.
+Zu Hause übernimmt seestar_alp im LXC ([seestar-astro-pipeline](https://github.com/ChristophCaina/seestar-astro-pipeline/blob/main/docs/01-seestar-alp-lxc.md)). **Pro Seestar läuft immer nur ein seestar_alp.** Ist der Seestar im Heim-WLAN, den Laptop-Dienst aus lassen oder den Dienst im LXC vorher stoppen.
 
 ## Voraussetzungen
 
 - seestar_alp unter `~/Astro/seestar_alp` mit venv (`venv/`), `device/config.toml` eingerichtet (Seestar `ip_address = "seestar.local"`, `interop_pem`)
 - `sudo apt install indi-bin kstars`
-- dieses Repo unter `~/Astro/seestar-astro-pipeline` (`git clone`)
+- dieses Repo unter `~/Astro/telescope-tools` (`git clone`)
 - optional für GPS: USB-GPS-Empfänger und `sudo apt install gpsd gpsd-clients` (Test: `cgps`)
 
 Andere Pfade: in den Dateien unter `systemd/` anpassen.
@@ -22,12 +22,12 @@ Andere Pfade: in den Dateien unter `systemd/` anpassen.
 ## Einrichten mit Desktop-Starter (empfohlen)
 
 ```bash
-bash ~/Astro/seestar-astro-pipeline/field/install-desktop.sh --server-alp 192.168.1.XX:5555
+bash ~/Astro/telescope-tools/field/install-desktop.sh --server-alp 192.168.1.XX:5555
 ```
 
 `--server-alp` ist die Adresse von seestar_alp im Heimnetz (LXC). Läuft der Dienst dort, fragt der Starter nach, bevor er einen zweiten seestar_alp startet.
 
-Das Skript kopiert die Dienste nach `~/.config/systemd/user`, schaltet den Autostart beim Anmelden ab, legt die Konfiguration der [Astro-Station](../station/README.md) an und auf dem Desktop und im Menü zwei Starter:
+Das Skript kopiert die Dienste nach `~/.config/systemd/user`, schaltet den Autostart beim Anmelden ab, legt die Konfiguration der [Astro-Station](station.md) an und auf dem Desktop und im Menü zwei Starter:
 
 - **Astro-Session starten**: seestar_alp, INDI-Server, Standort-Timer und Astro-Station starten, warten bis seestar_alp antwortet, dann die Astro-Station (`http://localhost:8070`) und Stellarium öffnen. Das Live-Fenster läuft unsichtbar mit und geht auf, sobald der Seestar Bilder liefert. Fortschritt als Desktop-Benachrichtigung.
 - **Astro-Session beenden**: alles wieder stoppen, Live-Fenster und Stellarium schließen.
@@ -38,7 +38,7 @@ Einstellungen in `~/.config/astro-session.env` (`OPEN_STELLARIUM=0`, `OPEN_BROWS
 
 ```bash
 mkdir -p ~/.config/systemd/user
-cp ~/Astro/seestar-astro-pipeline/field/systemd/* ~/.config/systemd/user/
+cp ~/Astro/telescope-tools/field/systemd/* ~/.config/systemd/user/
 systemctl --user daemon-reload
 systemctl --user enable --now seestar-alp.service seestar-indi.service seestar-location.timer
 ```
@@ -69,7 +69,7 @@ Der Timer prüft 2 Minuten nach dem Start und danach alle 15 Minuten. Änderunge
 Von Hand:
 
 ```bash
-python3 ~/Astro/seestar-astro-pipeline/field/seestar_location_sync.py \
+python3 ~/Astro/telescope-tools/field/seestar_location_sync.py \
   --config ~/Astro/seestar_alp/device/config.toml            # auto: GPS, sonst Seestar
   # --source gps|scope   --push   --gps-timeout 60
 ```
@@ -90,4 +90,4 @@ Vor dem ersten GoTo muss der Arm ausgefahren sein: Web-UI `http://localhost:5432
 
 ## Stellarium
 
-Die Stellarium-Pakete für Ubuntu 24.04 / Mint 22 (PPA, Flatpak) haben keine INDI-Teleskopsteuerung: Stellarium 26.x braucht INDI 2.x, Ubuntu 24.04 liefert 1.9.9. Deshalb bietet die Astro-Station pro Gerät einen Port für Stellarium an („Externe Software“, Seestar `localhost:10001`, iEXOS `localhost:10002`, JNow). Einrichtung: [`station/README.md`](../station/README.md#stellarium-verbinden-einmalig).
+Die Stellarium-Pakete für Ubuntu 24.04 / Mint 22 (PPA, Flatpak) haben keine INDI-Teleskopsteuerung: Stellarium 26.x braucht INDI 2.x, Ubuntu 24.04 liefert 1.9.9. Deshalb bietet die Astro-Station pro Gerät einen Port für Stellarium an („Externe Software“, Seestar `localhost:10001`, iEXOS `localhost:10002`, JNow). Einrichtung: [`station/README.md`](station.md#stellarium-verbinden-einmalig).

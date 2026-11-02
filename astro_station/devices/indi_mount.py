@@ -1,6 +1,6 @@
 """Montierung ueber INDI (z. B. iEXOS-100 mit indi_pmc8_telescope) plus die Kamera, die gerade daran haengt.
 
-Baut auf dem Controller der Astro-Pi-App auf (pi/astro_pi): GoTo, Zentrieren per Plate-Solving,
+Baut auf dem INDI-Controller in astro_pi/ auf: GoTo, Zentrieren per Plate-Solving,
 Serien mit siril-auto-Dateinamen, Live View. Die Kamera ist Teil des "Aufbaus" der Montierung:
 welche Kamera und welche Optik dranhaengen, geht als FITS-Header in jede Aufnahme.
 
@@ -23,7 +23,7 @@ from .base import Action, Device, Refused
 from .seestar import fmt_radec
 
 log = logging.getLogger("astro_station.indi")
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 STATE_DIR = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")) / "astro-station"
 
 
@@ -124,7 +124,7 @@ class IndiMount(Device):
             log.warning("%s: Treiber %s nicht startbar (%s)", self.id, drv, e)
 
     async def start(self):
-        sys.path.insert(0, str(ROOT / "pi"))
+        sys.path.insert(0, str(ROOT))
         try:
             from astro_pi.control import Controller, Settings
             from astro_pi.indi import IndiClient
