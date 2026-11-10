@@ -239,6 +239,50 @@ class SeestarTest(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.dev.live()["jpeg"].endswith("/live.jpg"))
         self.assertGreaterEqual(self.dev.live()["frame"], 1)
 
+    async def _stacking(self, frames_ago: float = 25):
+        await self.dev.poll_once(0)
+        await self.dev.action("unfold", {})
+        await self.dev.poll_once(1)
+        await self.dev.action("live", {})
+        await self.dev.action("stack", {"confirm": True})
+        self.scope.stack_started = time.time() - frames_ago      # zwei Einzelbilder gestapelt
+        await self.dev.poll_once(2)
+        self.assertTrue(self.dev.live()["stacking"])
+
+    async def _wait_for_image(self):
+        self.dev.wanted = time.time()
+        await self.dev.start()
+        for _ in range(40):
+            if self.dev.jpeg:
+                break
+            await asyncio.sleep(0.1)
+
+    async def test_stack_uses_cached_snapshot_not_vid(self):
+        await self._stacking()
+        outcome, img = await self.dev.fetch_stack_snapshot()
+        self.assertEqual(outcome, "new")
+        self.assertTrue(img.startswith(b"\xff\xd8"))
+        self.assertEqual((await self.dev.fetch_stack_snapshot())[0], "unchanged")   # 304, gleiches Frame
+        self.dev._snap_etag = None
+        await self._wait_for_image()
+        self.assertTrue(self.dev.jpeg)
+        self.assertEqual(self.scope.hits["vid"], 0)
+
+    async def test_snapshot_of_an_older_stack_is_ignored(self):
+        await self._stacking()
+        self.dev.events["Stack"]["stacked_frame"] = 0                 # Station kennt erst Frame 0
+        self.dev.events["Stack"]["dropped_frame"] = 0
+        self.assertEqual((await self.dev.fetch_stack_snapshot())[0], "none")
+
+    async def test_stack_without_snapshot_endpoint_falls_back_to_rare_vid(self):
+        self.scope.snapshot_endpoint = False
+        await self._stacking()
+        self.assertEqual((await self.dev.fetch_stack_snapshot())[0], "unsupported")
+        await self._wait_for_image()
+        self.assertTrue(self.dev.jpeg)
+        await asyncio.sleep(3.5)                                      # naechste Runde: kein neuer /vid-Abruf
+        self.assertEqual(self.scope.hits["vid"], 1)
+
 
 @unittest.skipUnless(HAVE_AIOHTTP, "aiohttp fehlt")
 class StationApiTest(unittest.IsolatedAsyncioTestCase):
