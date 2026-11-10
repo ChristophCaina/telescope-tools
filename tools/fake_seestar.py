@@ -34,6 +34,9 @@ class FakeScope:
         self.events: dict = {}
         self.calls: list[tuple] = []
         self.frame_no = 0
+        self.snapshot_endpoint = True                  # wie das seestar_alp-Add-on (jaxzin/ha_seestar_alp)
+        self.hits = {"vid": 0, "snapshot": 0}
+        self._snap: tuple[int, bytes] | None = None
 
     def _ev(self, name, **kw):
         self.events[name] = {"Event": name, "Timestamp": f"{time.time():.3f}", **kw}
@@ -110,6 +113,17 @@ class FakeScope:
             return {"code": 0}
         return {"code": 0}
 
+    def stack_count(self) -> int:
+        """Gestapelte + verworfene Frames, wie der Header X-Seestar-Stack-Frame."""
+        n = self.stacked()
+        return n + n // 12
+
+    def stack_jpeg(self) -> bytes:
+        n = self.stack_count()
+        if not self._snap or self._snap[0] != n:
+            self._snap = (n, self.jpeg())
+        return self._snap[1]
+
     def jpeg(self) -> bytes:
         self.frame_no += 1
         if Image is None:
@@ -161,6 +175,7 @@ def make_apps(scope: FakeScope):
     imaging = web.Application()
 
     async def vid(request):
+        scope.hits["vid"] += 1
         resp = web.StreamResponse(headers={"Content-Type": "multipart/x-mixed-replace; boundary=frame"})
         await resp.prepare(request)
 
@@ -179,7 +194,21 @@ def make_apps(scope: FakeScope):
         except (ConnectionResetError, asyncio.CancelledError):
             pass
         return resp
+    async def snapshot(request):
+        """Zwischengespeichertes Stack-Bild (seestar_alp-Fork): 200 mit ETag + Stack-Zahl, 304, 503, 404."""
+        if not scope.snapshot_endpoint:
+            raise web.HTTPNotFound()
+        scope.hits["snapshot"] += 1
+        if not scope.stack_started or scope.stack_count() < 1:
+            raise web.HTTPServiceUnavailable()
+        n = scope.stack_count()
+        etag = f'"{n}"'
+        if request.headers.get("If-None-Match") == etag:
+            raise web.HTTPNotModified(headers={"ETag": etag})
+        return web.Response(body=scope.stack_jpeg(), content_type="image/jpeg",
+                            headers={"ETag": etag, "X-Seestar-Stack-Frame": str(n)})
     imaging.router.add_get("/1/vid", vid)
+    imaging.router.add_get("/1/snapshot.jpg", snapshot)
     return alpaca, webui, imaging
 
 
