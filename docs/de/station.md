@@ -5,7 +5,7 @@ Web-App (`http://localhost:8070`) für den Feld-Laptop: ein Tab pro Gerät, Ger�
 ```
 Stellarium ──Telescope Control :10001/:10002──┐
 Browser ─────────────── http :8070 ───────────┤ Astro-Station ──Alpaca :5555──> seestar_alp ──> Seestar
-Live-Fenster <── MJPEG :7556 (seestar_alp) ───┘               └──INDI :7624──> indiserver ──> iEXOS + Kamera
+Live-Fenster <── Bilder :7556 (seestar_alp) ──┘               └──INDI :7624──> indiserver ──> iEXOS + Kamera
 ```
 
 **Nichts läuft von selbst.** GoTo, Arm ausfahren, Stacking und Serien passieren nur auf Knopfdruck (oder mit Strg+1 in Stellarium). GoTo und Bewegen lehnt die Station ab, solange der Seestar-Arm eingeklappt ist. Die Meldung erscheint in der Web-App und als Desktop-Benachrichtigung.
@@ -47,6 +47,11 @@ bash field/install-desktop.sh --server-alp 192.168.1.XX:5555
 ## Live-Fenster
 
 Geht auf, sobald seestar_alp Bilder vom Seestar liefert. Nach dem GoTo zeigt es die Live-Ansicht, beim Stacking den wachsenden Stack mit Frames, Gesamtzeit, verworfenen Frames und Belichtung. Das Umschalten zwischen Live und Stack macht seestar_alp selbst: Während des Stackings gibt es nur das Stack-Bild.
+
+Woher die Bilder kommen:
+
+- **Beim Stacking** holt die Station das zwischengespeicherte Stack-Bild (`/<n>/snapshot.jpg`). Es ändert sich nur, wenn ein neues Einzelbild dazukommt, und belastet seestar_alp praktisch nicht. Das bietet das seestar_alp-Add-on [jaxzin/ha_seestar_alp](https://github.com/jaxzin/ha_seestar_alp). Ein normales seestar_alp kennt es nicht. Dann zeigt die Station den Stack über den Live-Strom (`/<n>/vid`), aber nur einmal pro Belichtung, mindestens alle 15 s, weil jeder Abruf seestar_alp den ganzen Stack neu rechnen lässt.
+- **Live-Ansicht, Planet, Sonne, Mond:** alle 3 s ein Bild aus dem Live-Strom.
 
 - **Im Vordergrund** hält das Fenster über Stellarium.
 - **Vollbild** (oder F), **Bild speichern** legt eine JPEG-Datei unter `~/Bilder/Astro-Live/` ab.

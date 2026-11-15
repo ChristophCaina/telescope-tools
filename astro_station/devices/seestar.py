@@ -4,7 +4,11 @@ Alles geht ueber die Alpaca-Schnittstelle von seestar_alp (dieselben Befehle wie
   get_event_state            nicht-blockierend, alle 2 s: Ansicht, Stack, Akku, Arm, Vorgaenge
   scope_get_equ_coord        alle 3 s: Position (JNow) fuer Anzeige und Stellarium
   get_device_state           alle 30 s: Arm, Speicher, Modell
-Bilder (Live/Stack) liefert der Bildserver von seestar_alp direkt: <imaging>/<n>/vid (MJPEG).
+Bilder liefert der Bildserver von seestar_alp direkt:
+  <imaging>/<n>/snapshot.jpg  beim Stacking: das zwischengespeicherte Stack-Bild, ein JPEG pro neuem
+                              Frame (nur seestar_alp-Fork bzw. Add-on jaxzin/ha_seestar_alp)
+  <imaging>/<n>/vid           sonst (Live-Ansicht, Planet, Sonne, Mond) und als Ersatz, wenn der
+                              Bildserver kein snapshot.jpg kennt: MJPEG, wir lesen nur das erste Bild
 
 Keine Automatik: Arm ausfahren, Stacking usw. passieren nur auf Knopfdruck.
 GoTo und Bewegen werden abgelehnt, solange der Arm eingeklappt ist.
@@ -151,6 +155,9 @@ class Seestar(Device):
         self.jpeg: bytes | None = None                 # letztes Standbild vom Bildserver
         self.frame = 0                                 # zaehlt neue Standbilder (fuer Browser/Live-Fenster)
         self.wanted = 0.0                              # wann zuletzt jemand Bilder wollte
+        self._snap_etag: str | None = None             # ETag des zuletzt uebernommenen Stack-Bilds
+        self._snap_missing_at = 0.0                    # wann snapshot.jpg zuletzt 404 lieferte
+        self._vid_at = 0.0                             # letzter Abruf von /vid
         self.alerts: list[str] = []                    # neue Fehlermeldungen der Firmware (Station meldet sie)
         self._fail_seen: set = set()
         self._clock_for: tuple | None = None           # Standort, fuer den Uhr/Standort zuletzt gesetzt wurden
@@ -237,15 +244,76 @@ class Seestar(Device):
                     # "Loading"-GIF: noch kein Bild – weiterlesen
         return None
 
+    def stack_count(self) -> int | None:
+        """Gestapelte + verworfene Frames des laufenden Stacks (zaehlt pro Einzelbild eins hoch)."""
+        st = self.events.get("Stack") if isinstance(self.events.get("Stack"), dict) else {}
+        a, b = st.get("stacked_frame"), st.get("dropped_frame")
+        if not isinstance(a, int):
+            return None
+        return a + (b if isinstance(b, int) else 0)
+
+    async def fetch_stack_snapshot(self) -> tuple[str, bytes | None]:
+        """Das zwischengespeicherte Stack-Bild von seestar_alp: ("new"|"unchanged"|"none"|"unsupported", jpeg).
+
+        Kostet seestar_alp nichts: kein MJPEG-Generator, 304 ohne Inhalt, solange kein neues Frame da ist.
+        Ein Bild gilt nur, wenn seine Stack-Zahl zum laufenden Stack passt (1..aktuelle Zahl); ein
+        uebrig gebliebenes Bild eines frueheren Stacks hat eine hoehere Zahl und wird verworfen."""
+        current = self.stack_count()
+        s = await self._session()
+        headers = {"If-None-Match": self._snap_etag} if self._snap_etag else {}
+        async with s.get(f"{self.imaging}/{self.n}/snapshot.jpg", headers=headers,
+                         timeout=aiohttp.ClientTimeout(total=8)) as r:
+            if r.status == 304:
+                return "unchanged", None
+            if r.status == 404:
+                return "unsupported", None
+            if r.status != 200:
+                return "none", None                    # 503: noch kein Bild
+            try:
+                tagged = int(r.headers.get("X-Seestar-Stack-Frame", ""))
+            except ValueError:
+                return "none", None
+            if current is None or not 0 < tagged <= current:
+                return "none", None
+            body = await r.read()
+            if not body.startswith(b"\xff\xd8"):
+                return "none", None
+            self._snap_etag = r.headers.get("ETag")
+            return "new", body
+
+    def _take(self, img: bytes | None):
+        if img and img != self.jpeg:
+            self.jpeg, self.frame = img, self.frame + 1
+
     async def _snapshots(self):
-        """Solange eine Ansicht laeuft und jemand zuschaut: alle 3 s (Stacking 6 s) ein Standbild holen."""
+        """Solange eine Ansicht laeuft und jemand zuschaut, Standbilder holen.
+
+        Stacking: alle 3 s snapshot.jpg (meist 304). Jeder kurze Abruf von /vid laesst in seestar_alp
+        einen Generator zurueck, der den ganzen Stack bis zum naechsten Frame neu streckt – wiederholt
+        hat das seestar_alp schon den Speicher gekostet. /vid beim Stacking darum nur, wenn der
+        Bildserver kein snapshot.jpg kennt, und dann hoechstens einmal pro Belichtung (mind. 15 s).
+        Sonst (Live, Planet, Sonne, Mond): alle 3 s ein Bild von /vid."""
         while True:
             try:
                 if self.online and self.view_active() and time.time() - self.wanted < 30:
-                    img = await self.fetch_image()
-                    if img and img != self.jpeg:
-                        self.jpeg, self.frame = img, self.frame + 1
-                    await asyncio.sleep(6 if self.live()["stacking"] else 3)
+                    now = time.time()
+                    if self.live()["stacking"]:
+                        outcome = "unsupported"
+                        if now - self._snap_missing_at > 600:      # alle 10 min neu probieren
+                            outcome, img = await self.fetch_stack_snapshot()
+                            if outcome == "new":
+                                self._take(img)
+                            elif outcome == "unsupported":
+                                self._snap_missing_at = now
+                                log.info("%s: Bildserver ohne snapshot.jpg – Stack-Bild über /vid (seltener)", self.id)
+                        if outcome == "unsupported" and now - self._vid_at >= max(15.0, self.live()["exposure_s"] or 0):
+                            self._vid_at = now
+                            self._take(await self.fetch_image())
+                    else:
+                        self._snap_etag = None
+                        self._vid_at = now
+                        self._take(await self.fetch_image())
+                    await asyncio.sleep(3)
                     continue
             except asyncio.CancelledError:
                 raise
